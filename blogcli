@@ -1,0 +1,75 @@
+#!/bin/bash
+drafts="$PWD/.drafts"
+extension=".html"
+author="Name Surname"
+assets="$PWD/assets"
+template="$assets/template.html"
+indexFile="$assets/index.html"
+
+new() {
+    read -erp "New blog title: " title
+    anchorTitle=$(echo $title | sed "s/[[:blank:]]/-/g" | tr '[:upper:]' '[:lower:]')
+    if [ -f "$drafts/$anchorTitle$extension" ]; then
+        printf "File already exists\n"
+        exit
+    fi
+    cp "$template" "$drafts/$anchorTitle$extension"
+    printf "Created a draft at $drafts/$anchorTitle$extension\n"
+
+    date=$(date +"%d/%m/%y")
+
+    content="<article id=\"$anchorTitle\">\n\t<h1>$title</h1>\n\t<p>\n\t\t<sub>$date</sub>\n\t\t<sub><i>$author</i></sub>\n\t\t<a href='#$anchorTitle'>[Anchor]</a>\n\t\t<a href='/$anchorTitle$extension'>[Standalone]</a>\n\t</p>\n\t<!--\$CONTENT-->\n</article>"
+
+    sed -i "s/\$TITLE/$title/" "$drafts/$anchorTitle$extension"
+    sed -i "s|\$CONTENT|$content|" "$drafts/$anchorTitle$extension"
+
+    [[ "$EDITOR" ]] && "$EDITOR" "$drafts/$anchorTitle$extension" || printf "No default text editor found\n"
+}
+
+listAndSelectFile() {
+    # List all files with target extension and number them, if no files are present exit
+    files=`ls -1t "$drafts" | grep "$extension" | awk '{print NR,$0}'` && [[ "$files" = "" ]] && printf "No files found\n" && exit
+    
+    printf "$files\n"
+
+    read -erp "Select file: " fileNum && [[ "$fileNum" = "" ]] && printf "Nothing selected\n" && exit
+
+    selected_file=`printf "$files" | sed "${fileNum}q;d" | sed 's/[[:digit:]]\s//'`
+}
+
+remove() {
+    listAndSelectFile ;
+    rm "$drafts/$selected_file"
+}
+
+publish() {
+    listAndSelectFile ;
+
+    content=$(cat "$drafts/$selected_file" | awk '/<!--\$START-->/,/<!--\$END-->/' | sed 's/<!--\$START-->//' | sed 's/<!--\$END-->//')
+    originalFile=$(cat "$indexFile" | awk '/<!--\$START-->/,/<!--\$END-->/' | sed 's/<!--\$START-->//' | sed 's/<!--\$END-->//')
+
+    printf "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Blog</title><link rel=\"stylesheet\" href=\"reset.css\"><link rel=\"stylesheet\" href=\"style.css\"></head><body><main>\n<!--\$START-->\n%s\n%s\n<!--\$END-->\n</main></body></html>" "$content" "$originalFile" > "$indexFile"
+    mv "$drafts/$selected_file" "$assets/"
+}
+
+edit() {
+    listAndSelectFile ;
+
+    [[ "$EDITOR" ]] && "$EDITOR" "$drafts/$selected_file" && printf "Draft saved in: $drafts/$selected_file\n" || printf "No default text editor found\n"
+}
+
+help() {
+    printf "Blog CLI\nUsage:\n\tnew - creates new draft\n\tedit - edit existing draft\n\tlist - list existing drafts\n\tremove - remove existing draft\n\tpublish - publish existing draft\n"
+}
+
+[[ ! -d "$drafts" ]] && mkdir "$drafts"
+
+case "$1" in
+    "new") new ;;
+    "edit") edit ;;
+    "list") listAndSelectFile ;;
+    "remove") remove ;;
+    "publish") publish ;;
+    "help") help ;;
+    *) help ;;
+esac
