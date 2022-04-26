@@ -2,18 +2,19 @@
 drafts="$PWD/.drafts"
 extension=".html"
 author="Name Surname"
-assets="$PWD/assets"
-template="$assets/template.html"
-indexFile="$assets/index.html"
+root="$PWD/root"
+template="template.html"
+indexTemplate="index.html"
+indexFile="$root/index.html"
+css="$PWD/style.css"
 
 new() {
     read -erp "New blog title: " title
     anchorTitle=$(echo $title | sed "s/[[:blank:]]/-/g" | tr '[:upper:]' '[:lower:]')
-    if [ -f "$drafts/$anchorTitle$extension" ]; then
-        printf "File already exists\n"
-        exit
-    fi
+    [[ -f "$drafts/$anchorTitle$extension" ]] && printf "File already exists\n" && exit
+
     cp "$template" "$drafts/$anchorTitle$extension"
+    [[ ! -f "$drafts/style.css" ]] && cp "$css" "$drafts/"
     printf "Created a draft at $drafts/$anchorTitle$extension\n"
 
     date=$(date +"%d/%m/%y")
@@ -48,8 +49,12 @@ publish() {
     content=$(cat "$drafts/$selected_file" | awk '/<!--\$START-->/,/<!--\$END-->/' | sed 's/<!--\$START-->//' | sed 's/<!--\$END-->//')
     originalFile=$(cat "$indexFile" | awk '/<!--\$START-->/,/<!--\$END-->/' | sed 's/<!--\$START-->//' | sed 's/<!--\$END-->//')
 
-    printf "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>Blog</title><link rel=\"stylesheet\" href=\"reset.css\"><link rel=\"stylesheet\" href=\"style.css\"></head><body><main>\n<!--\$START-->\n%s\n%s\n<!--\$END-->\n</main></body></html>" "$content" "$originalFile" > "$indexFile"
-    mv "$drafts/$selected_file" "$assets/"
+    content=$(echo "$content" | tr -d \\n)
+    content+="\n<!--\$END-->"
+
+    sed -i "s|<!--\$END-->|$content|" "$indexFile" || exit
+
+    mv "$drafts/$selected_file" "$root/"
 }
 
 edit() {
@@ -63,6 +68,9 @@ help() {
 }
 
 [[ ! -d "$drafts" ]] && mkdir "$drafts"
+[[ ! -d "$root" ]] && mkdir "$root"
+[[ ! -f "$indexFile" ]] && cp "$indexTemplate" "$root"
+[[ ! -f "$root/style.css" ]] && cp "$css" "$root/"
 
 case "$1" in
     "new") new ;;
