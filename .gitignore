@@ -1,2 +1,4 @@
 .idea/
 blog.html
+assets/*.html
+.drafts/*.html
