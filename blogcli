@@ -1,7 +1,6 @@
-#!/bin/bash
+#!/usr/bin/env bash
 drafts="$PWD/.drafts"
 extension=".html"
-author="Name Surname"
 root="$PWD/root"
 template="template.html"
 indexTemplate="index.html"
@@ -47,7 +46,6 @@ publish() {
     listAndSelectFile ;
 
     content=$(cat "$drafts/$selected_file" | awk '/<!--\$START-->/,/<!--\$END-->/' | sed 's/<!--\$START-->//' | sed 's/<!--\$END-->//')
-    originalFile=$(cat "$indexFile" | awk '/<!--\$START-->/,/<!--\$END-->/' | sed 's/<!--\$START-->//' | sed 's/<!--\$END-->//')
 
     content=$(echo "$content" | tr -d \\n)
     content+="\n<!--\$END-->"
@@ -66,6 +64,8 @@ edit() {
 help() {
     printf "Blog CLI\nUsage:\n\tnew - creates new draft\n\tedit - edit existing draft\n\tlist - list existing drafts\n\tremove - remove existing draft\n\tpublish - publish existing draft\n"
 }
+
+source ./config
 
 [[ ! -d "$drafts" ]] && mkdir "$drafts"
 [[ ! -d "$root" ]] && mkdir "$root"
